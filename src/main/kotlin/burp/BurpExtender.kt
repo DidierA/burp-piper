@@ -27,6 +27,7 @@ import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import java.io.BufferedReader
 import java.io.File
+import java.io.PrintStream
 import java.net.URL
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -439,7 +440,16 @@ class BurpExtender : IBurpExtender, ITab, ListDataListener, IHttpListener {
                 if (selectionContext != null) {
                     val (context, bounds) = selectionContext
                     if (context in rr.contexts) {
-                        val body = bytes.copyOfRange(bounds[0], bounds[1])
+                        val body = try {
+                            // handle utf-8 content
+                            bytes.toString(Charsets.UTF_8).substring(bounds[0], bounds[1]).toByteArray(Charsets.UTF_8)
+                        } catch (ex: Exception) {
+                            // Converting to utf-8 string failed somehow.
+                            ex.printStackTrace(PrintStream(callbacks.getStderr()))
+                            // Revert to plain byte extraction
+                            bytes.copyOfRange(bounds[0], bounds[1])
+                        }
+
                         selections.add(MessageInfo(body, helpers.bytesToString(body), headers, url, it))
                     }
                 }
