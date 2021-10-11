@@ -442,14 +442,16 @@ class BurpExtender : IBurpExtender, ITab, ListDataListener, IHttpListener {
                     if (context in rr.contexts) {
                         val body = try {
                             // handle utf-8 content
-                            bytes.toString(Charsets.UTF_8).substring(bounds[0], bounds[1]).toByteArray(Charsets.UTF_8)
-                        } catch (ex: Exception) {
-                            // Converting to utf-8 string failed somehow.
-                            ex.printStackTrace(PrintStream(callbacks.getStderr()))
+                            bytes.decodeToString(throwOnInvalidSequence=true).substring(bounds[0], bounds[1]).encodeToByteArray()
+                        } catch (ex: java.nio.charset.MalformedInputException) {
+                            // Converting to utf-8 string failed.
                             // Revert to plain byte extraction
                             bytes.copyOfRange(bounds[0], bounds[1])
+                        } catch (ex: Exception) {
+                            // What happened here?
+                            ex.printStackTrace(PrintStream(callbacks.getStderr()))
+                            bytes.copyOfRange(bounds[0], bounds[1])
                         }
-
                         selections.add(MessageInfo(body, helpers.bytesToString(body), headers, url, it))
                     }
                 }
